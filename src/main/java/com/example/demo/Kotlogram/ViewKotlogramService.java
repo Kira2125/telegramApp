@@ -29,11 +29,9 @@ import com.github.badoualy.telegram.tl.api.auth.TLAuthorization;
 import com.github.badoualy.telegram.tl.api.auth.TLSentCode;
 import com.github.badoualy.telegram.tl.api.contacts.TLImportedContacts;
 import com.github.badoualy.telegram.tl.api.messages.TLAbsDialogs;
-import com.github.badoualy.telegram.tl.api.messages.TLAbsMessages;
 import com.github.badoualy.telegram.tl.core.TLObject;
 import com.github.badoualy.telegram.tl.core.TLVector;
 import com.github.badoualy.telegram.tl.exception.RpcErrorException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Lookup;
 import org.springframework.stereotype.Service;
 
@@ -43,13 +41,50 @@ import java.util.Random;
 import java.util.Scanner;
 
 @Service
-public class KotlogramService {
+public class ViewKotlogramService {
+    ApiStorage authenticateApiStorage;
 
 
     @Lookup
     public ApiStorage createApiStorage() {
         return null;
     };
+
+    public void sendVerificationCode(String phone) {
+        ApiStorage apiStorage = createApiStorage();
+        apiStorage.setPHONE_NUMBER(phone);
+        TelegramClient client = Kotlogram.getDefaultClient(Utils.application, apiStorage);
+
+        try {
+            TLSentCode sentCode = client.authSendCode(false, apiStorage.getPHONE_NUMBER(), true);
+            apiStorage.saveCodeHash(sentCode.getPhoneCodeHash());
+            authenticateApiStorage = apiStorage;
+
+        } catch (RpcErrorException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            client.close(false);
+        }
+    }
+
+    public void submitVerificationCode(String code, String phone) {
+        ApiStorage apiStorage = createApiStorage();
+
+        TelegramClient client = Kotlogram.getDefaultClient(Utils.application, apiStorage);
+        apiStorage.setPHONE_NUMBER(phone);
+        try {
+            String codeHash = apiStorage.loadCodeHash();
+            TLAuthorization authorization = client.authSignIn("+7", codeHash, code);
+            TLUser self = authorization.getUser().getAsUser();
+            System.out.println("You are now signed in as " + self.getFirstName() + " " + self.getLastName() + " @" + self.getUsername());
+
+        } catch (RpcErrorException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            apiStorage.saveAuthKeyHandler();
+            client.close(false);
+        }
+    }
 
     private void authorization(TelegramClient client, ApiStorage apiStorage) throws RpcErrorException, IOException {
         TLSentCode sentCode = client.authSendCode(false, apiStorage.getPHONE_NUMBER(), true);

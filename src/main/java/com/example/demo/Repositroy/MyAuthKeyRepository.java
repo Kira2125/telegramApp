@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface MyAuthKeyRepository extends JpaRepository<MyAuthKey, Long> {
 
     Optional<MyAuthKey> findAllByPhoneNumber(String phone);
+    void deleteByPhoneNumber(String phone);
 }

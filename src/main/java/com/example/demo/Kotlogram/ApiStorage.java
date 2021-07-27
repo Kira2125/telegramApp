@@ -1,7 +1,9 @@
 package com.example.demo.Kotlogram;
 
+import com.example.demo.Model.CodeHash;
 import com.example.demo.Model.MyAuthKey;
 import com.example.demo.Model.MySession;
+import com.example.demo.Repositroy.CodeHashRepository;
 import com.example.demo.Repositroy.MyAuthKeyRepository;
 import com.example.demo.Repositroy.MySessionRepository;
 import com.github.badoualy.telegram.api.TelegramApiStorage;
@@ -10,9 +12,11 @@ import com.github.badoualy.telegram.mtproto.model.DataCenter;
 import com.github.badoualy.telegram.mtproto.model.MTSession;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import javax.transaction.Transactional;
 import java.io.File;
 
 @Component
@@ -21,12 +25,15 @@ public class ApiStorage implements TelegramApiStorage {
 
     private String PHONE_NUMBER;
 
+    @Autowired
+    private CodeHashRepository codeHashRepository;
+
     private final MyAuthKeyRepository myAuthKeyRepository;
     private final MySessionRepository mySessionRepository;
 
-
+    private AuthKey authKey;
     //Create File variable for auth.key and dc.save
-    public  final File AUTH_KEY_FILE = new File("Properties/auth" + ".key");
+//    public  final File AUTH_KEY_FILE = new File("Properties/auth" + ".key");
 //    public  final File NEAREST_DC_FILE;
 //    public  final File SESSION_FILE;
 
@@ -53,14 +60,18 @@ public class ApiStorage implements TelegramApiStorage {
 //            FileUtils.writeByteArrayToFile(AUTH_KEY_FILE, authKey.getKey());
 //            ObjectMapper objectMapper = new ObjectMapper();
 //            objectMapper.writeValue(AUTH_KEY_FILE, authKey);
+
+        this.authKey = authKey;
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+    }
+
+    public void saveAuthKeyHandler() {
         MyAuthKey myAuthKey = new MyAuthKey();
         myAuthKey.setPhoneNumber(PHONE_NUMBER);
         myAuthKey.setKey(authKey.getKey());
         myAuthKeyRepository.save(myAuthKey);
-
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     @Nullable
@@ -106,12 +117,14 @@ public class ApiStorage implements TelegramApiStorage {
     }
 
     @Override
+    @Transactional
     public void deleteAuthKey() {
 //        try {
 //            FileUtils.forceDelete(AUTH_KEY_FILE);
 //        } catch (IOException e) {
 //            e.printStackTrace();
 //        }
+        myAuthKeyRepository.deleteByPhoneNumber(PHONE_NUMBER);
     }
 
     @Override
@@ -125,32 +138,44 @@ public class ApiStorage implements TelegramApiStorage {
 
     @Override
     public void saveSession(@Nullable MTSession session) {
-        if(session != null) {
-            MySession mySession = new MySession();
-            mySession.setSession_id(session.getId());
-            mySession.setContentRelatedCount(session.getContentRelatedCount());
-            mySession.setSalt(session.getSalt());
-            mySession.setLastMessageId(session.getLastMessageId());
-            mySession.setTag(session.getTag());
-            mySession.setDataCenterIp(session.getDataCenter().getIp());
-            mySession.setDataCenterPort(session.getDataCenter().getPort());
-            mySession.setMarkerName(session.getMarker().getName());
-            mySession.setPhoneNumber(PHONE_NUMBER);
-            mySessionRepository.save(mySession);
-        }
+//        if(session != null) {
+//            MySession mySession = new MySession();
+//            mySession.setSession_id(session.getId());
+//            mySession.setContentRelatedCount(session.getContentRelatedCount());
+//            mySession.setSalt(session.getSalt());
+//            mySession.setLastMessageId(session.getLastMessageId());
+//            mySession.setTag(session.getTag());
+//            mySession.setDataCenterIp(session.getDataCenter().getIp());
+//            mySession.setDataCenterPort(session.getDataCenter().getPort());
+//            mySession.setMarkerName(session.getMarker().getName());
+//            mySession.setPhoneNumber(PHONE_NUMBER);
+//            mySessionRepository.save(mySession);
+//        }
 
     }
 
     @Nullable
     @Override
     public MTSession loadSession() {
-        MySession session = mySessionRepository.findAllByPhoneNumber(PHONE_NUMBER).orElse(null);
-        if(session != null) {
-            return new MTSession(new DataCenter(session.getDataCenterIp(), session.getDataCenterPort()),
-                    session.getSession_id(), session.getSalt(), session.getContentRelatedCount(), session.getLastMessageId(),
-                    session.getTag());
-        }
+//        MySession session = mySessionRepository.findAllByPhoneNumber(PHONE_NUMBER).orElse(null).stream().findFirst().orElse(null);
+//        if(session != null) {
+//            return new MTSession(new DataCenter(session.getDataCenterIp(), session.getDataCenterPort()),
+//                    session.getSession_id(), session.getSalt(), session.getContentRelatedCount(), session.getLastMessageId(),
+//                    session.getTag());
+//        }
 
         return null;
+    }
+
+
+    public void saveCodeHash(String codeHash) {
+        CodeHash codeHash1 = new CodeHash();
+        codeHash1.setCodeHash(codeHash);
+        codeHash1.setPhone(PHONE_NUMBER);
+        codeHashRepository.save(codeHash1);
+    }
+
+    public String loadCodeHash() {
+        return codeHashRepository.findCodeHashByPhone(PHONE_NUMBER).getCodeHash();
     }
 }
