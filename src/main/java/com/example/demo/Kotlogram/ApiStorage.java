@@ -61,17 +61,22 @@ public class ApiStorage implements TelegramApiStorage {
 //            ObjectMapper objectMapper = new ObjectMapper();
 //            objectMapper.writeValue(AUTH_KEY_FILE, authKey);
 
-        this.authKey = authKey;
+//        this.authKey = authKey;
+
+        MyAuthKey myAuthKey = new MyAuthKey();
+        myAuthKey.setPhoneNumber(PHONE_NUMBER);
+        myAuthKey.setKey(authKey.getKey());
+        myAuthKeyRepository.save(myAuthKey);
 //        } catch (IOException e) {
 //            e.printStackTrace();
 //        }
     }
 
     public void saveAuthKeyHandler() {
-        MyAuthKey myAuthKey = new MyAuthKey();
-        myAuthKey.setPhoneNumber(PHONE_NUMBER);
-        myAuthKey.setKey(authKey.getKey());
-        myAuthKeyRepository.save(myAuthKey);
+//        MyAuthKey myAuthKey = new MyAuthKey();
+//        myAuthKey.setPhoneNumber(PHONE_NUMBER);
+//        myAuthKey.setKey(authKey.getKey());
+//        myAuthKeyRepository.save(myAuthKey);
     }
 
     @Nullable

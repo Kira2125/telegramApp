@@ -17,6 +17,7 @@ import com.github.badoualy.telegram.tl.api.TLImportedContact;
 import com.github.badoualy.telegram.tl.api.TLInputPeerChannel;
 import com.github.badoualy.telegram.tl.api.TLInputPeerChat;
 import com.github.badoualy.telegram.tl.api.TLInputPeerEmpty;
+import com.github.badoualy.telegram.tl.api.TLInputPeerSelf;
 import com.github.badoualy.telegram.tl.api.TLInputPeerUser;
 import com.github.badoualy.telegram.tl.api.TLInputPhoneContact;
 import com.github.badoualy.telegram.tl.api.TLMessage;
@@ -29,6 +30,7 @@ import com.github.badoualy.telegram.tl.api.auth.TLAuthorization;
 import com.github.badoualy.telegram.tl.api.auth.TLSentCode;
 import com.github.badoualy.telegram.tl.api.contacts.TLImportedContacts;
 import com.github.badoualy.telegram.tl.api.messages.TLAbsDialogs;
+import com.github.badoualy.telegram.tl.api.messages.TLAbsMessages;
 import com.github.badoualy.telegram.tl.core.TLObject;
 import com.github.badoualy.telegram.tl.core.TLVector;
 import com.github.badoualy.telegram.tl.exception.RpcErrorException;
@@ -68,20 +70,20 @@ public class ViewKotlogramService {
     }
 
     public void submitVerificationCode(String code, String phone) {
-        ApiStorage apiStorage = createApiStorage();
+        ApiStorage apiStorage = authenticateApiStorage;
 
         TelegramClient client = Kotlogram.getDefaultClient(Utils.application, apiStorage);
         apiStorage.setPHONE_NUMBER(phone);
         try {
             String codeHash = apiStorage.loadCodeHash();
-            TLAuthorization authorization = client.authSignIn("+7", codeHash, code);
+            TLAuthorization authorization = client.authSignIn(phone, codeHash, code);
             TLUser self = authorization.getUser().getAsUser();
             System.out.println("You are now signed in as " + self.getFirstName() + " " + self.getLastName() + " @" + self.getUsername());
-
+            apiStorage.saveAuthKeyHandler();
         } catch (RpcErrorException | IOException e) {
             e.printStackTrace();
         } finally {
-            apiStorage.saveAuthKeyHandler();
+
             client.close(false);
         }
     }
@@ -131,9 +133,9 @@ public class ViewKotlogramService {
         apiStorage.setPHONE_NUMBER(phone);
         TelegramClient client = Kotlogram.getDefaultClient(Utils.application, apiStorage);
         try {
-            if (apiStorage.loadSession() == null) {
-                    authorization(client, apiStorage);
-            }
+//            if (apiStorage.loadSession() == null) {
+//                    authorization(client, apiStorage);
+//            }
             sendMessage(client);
         } catch (RpcErrorException | IOException e) {
             e.printStackTrace();
@@ -170,10 +172,10 @@ public class ViewKotlogramService {
         apiStorage.setPHONE_NUMBER(phone);
         TelegramClient client = Kotlogram.getDefaultClient(Utils.application, apiStorage);
         try {
-            if (apiStorage.loadAuthKey() == null) {
-
-                    authorization(client, apiStorage);
-            }
+//            if (apiStorage.loadAuthKey() == null) {
+//
+//                    authorization(client, apiStorage);
+//            }
             stringBuilder = getRecentConversationList(client);
 //            client.authLogOut();
 //            apiStorage.deleteAuthKey();
@@ -190,7 +192,7 @@ public class ViewKotlogramService {
         int count = 10;
         StringBuilder stringBuilder = new StringBuilder();
         // You can start making requests
-            TLAbsDialogs tlAbsDialogs = client.messagesGetDialogs(false, 0, 0, new TLInputPeerEmpty(), count);
+            TLAbsDialogs tlAbsDialogs = client.messagesGetDialogs(false, 3, 0, new TLInputPeerSelf(), count);
 //            TLAbsInputPeer inputPeer = getInputPeer(tlAbsDialogs);
 //            TLAbsMessages tlAbsMessages = client.messagesGetHistory(inputPeer, 0, 0, 0, count, 0, 0);
 //            tlAbsMessages.getMessages().forEach(message -> {
@@ -208,10 +210,11 @@ public class ViewKotlogramService {
 
             tlAbsDialogs.getDialogs().forEach(dialog -> {
                 String dialogPeer = nameMap.get(getId(dialog.getPeer())) + ": ";
-                stringBuilder.append(dialogPeer + " ");
+                stringBuilder.append("*****" + dialogPeer + " ");
                 TLAbsMessage topMessage = messageMap.get(dialog.getTopMessage());
                 if (topMessage instanceof TLMessage) {
                     // The message could also be a file, a photo, a gif, ...
+                    stringBuilder.append(topMessage.getId() + " " + ((TLMessage) topMessage).getMediaUnread() + " ");
                     stringBuilder.append(((TLMessage) topMessage).getMessage());
                 } else if (topMessage instanceof TLMessageService) {
                     TLAbsMessageAction action = ((TLMessageService) topMessage).getAction();
@@ -220,6 +223,43 @@ public class ViewKotlogramService {
                 }
             });
 
+        return stringBuilder;
+    }
+
+    public StringBuilder getMessages(String phone) {
+        StringBuilder stringBuilder = new StringBuilder();
+        ApiStorage apiStorage = createApiStorage();
+        apiStorage.setPHONE_NUMBER(phone);
+        TelegramClient client = Kotlogram.getDefaultClient(Utils.application, apiStorage);
+        try {
+//            if (apiStorage.loadAuthKey() == null) {
+//
+//                    authorization(client, apiStorage);
+//            }
+            stringBuilder = getMessages(client);
+//            client.authLogOut();
+//            apiStorage.deleteAuthKey();
+        } catch (RpcErrorException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            client.close(false);
+        }
+        return stringBuilder;
+    }
+
+    private StringBuilder getMessages(TelegramClient client) throws RpcErrorException, IOException {
+        int count = 10;
+        StringBuilder stringBuilder = new StringBuilder();
+        TLAbsDialogs tlAbsDialogs = client.messagesGetDialogs(false,0, 0, new TLInputPeerEmpty(), 1);
+        TLAbsInputPeer inputPeer = getInputPeer(tlAbsDialogs);
+
+        TLAbsMessages tlAbsMessages = client.messagesGetHistory(inputPeer, 0, 0, 10, count, 0, 0);
+        tlAbsMessages.getMessages().forEach(message -> {
+            if (message instanceof TLMessage)
+                stringBuilder.append(((TLMessage) message).getMessage() + " *** ");
+            else
+                stringBuilder.append("Service message " + " *** ");
+        });
         return stringBuilder;
     }
 

@@ -36,7 +36,7 @@ public class KotlogramController {
 
     @GetMapping("/get-dialogs")
     public String greetingForm(@RequestParam String phone) {
-        StringBuilder stringBuilder = viewKotlogramService.getRecentConversationList(phone);
+        StringBuilder stringBuilder = viewKotlogramService.getMessages(phone);
         return stringBuilder.toString();
     }
 }
